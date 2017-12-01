@@ -339,7 +339,7 @@ mkUniqueArguments (Just teM) args = do
           i'   = pack (name2String i)
           ty   = unembed (varType var)
           hwty = unsafeCoreTypeToHWType $(curLoc) typeTrans tcm ty
-      (ports,decls,_,pN) <- mkInput pM (i',hwty)
+      (ports,decls,_,pN) <- mkInput [] pM (i',hwty)
       return (ports,decls,(nameOcc i, Var ty (repName (unpack pN) i)))
 
 mkUniqueResult
@@ -359,7 +359,7 @@ mkUniqueResult (Just teM) res = do
       ty   = unembed (varType res)
       hwty = unsafeCoreTypeToHWType $(curLoc) typeTrans tcm ty
       oPortSupply = fmap t_output teM
-  (ports,decls,pN) <- mkOutput oPortSupply (o',hwty)
+  (ports,decls,pN) <- mkOutput [] oPortSupply (o',hwty)
   let pO = repName (unpack pN) o
   return (ports,decls,Id pO (embed ty),(nameOcc o,Var ty pO))
 
@@ -462,6 +462,11 @@ portName
 portName [] i = i
 portName x  _ = pack x
 
+mkPortName
+  :: [Identifier]
+  -> Identifier
+mkPortName = Text.intercalate "_" . reverse
+
 appendIdentifier
   :: (Identifier,HWType)
   -> Int
@@ -480,19 +485,22 @@ uniquePortName x  _ = do
   return x'
 
 mkInput
-  :: Maybe PortName
+  :: [Identifier]
+  -> Maybe PortName
   -> (Identifier,HWType)
   -> NetlistMonad ([(Identifier,HWType)],[Declaration],Expr,Identifier)
-mkInput pM = case pM of
-  Nothing -> go
-  Just p  -> go' p
+mkInput parents0 pM = case pM of
+  Nothing -> go parents0
+  Just p  -> go' parents0 p
   where
-    go (i,hwty) = do
+    -- No PortName given, infer names
+    go parents (i,hwty) = do
       i' <- mkUniqueIdentifier Extended i
+      let parents' = i' : parents
       case hwty of
         Vector sz hwty' -> do
           arguments <- mapM (appendIdentifier (i',hwty')) [0..sz-1]
-          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput Nothing) arguments
+          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput parents' Nothing) arguments
           let netdecl  = NetDecl Nothing i' hwty
               vecExpr  = mkVectorChain sz hwty' exprs
               netassgn = Assignment i' vecExpr
@@ -500,7 +508,7 @@ mkInput pM = case pM of
 
         RTree d hwty' -> do
           arguments <- mapM (appendIdentifier (i',hwty')) [0..2^d-1]
-          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput Nothing) arguments
+          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput parents' Nothing) arguments
           let netdecl  = NetDecl Nothing i' hwty
               trExpr   = mkRTreeChain d hwty' exprs
               netassgn = Assignment i' trExpr
@@ -508,7 +516,7 @@ mkInput pM = case pM of
 
         Product _ hwtys -> do
           arguments <- zipWithM appendIdentifier (map (i',) hwtys) [0..]
-          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput Nothing) arguments
+          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput parents' Nothing) arguments
           let netdecl  = NetDecl Nothing i' hwty
               dcExpr   = DataCon hwty (DC (hwty,0)) exprs
               netassgn = Assignment i' dcExpr
@@ -517,7 +525,7 @@ mkInput pM = case pM of
         Clock nm rt Gated -> do
           let hwtys = [Clock nm rt Source,Bool]
           arguments <- zipWithM appendIdentifier (map (i',) hwtys) [0..]
-          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput Nothing) arguments
+          (ports,_,exprs,_) <- unzip4 <$> mapM (mkInput parents' Nothing) arguments
           let netdecl  = NetDecl Nothing i' hwty
               dcExpr   = DataCon hwty (DC (hwty,0)) exprs
               netassgn = Assignment i' dcExpr
@@ -526,16 +534,18 @@ mkInput pM = case pM of
         _ -> return ([(i',hwty)],[],Identifier i' Nothing,i')
 
 
-    go' (PortName p) (i,hwty) = do
-      pN <- uniquePortName p i
+    -- PortName specified by user
+    go' parents (PortName p) (i,hwty) = do
+      pN <- mkPortName . (:parents) <$> uniquePortName p i
       return ([(pN,hwty)],[],Identifier pN Nothing,pN)
 
-    go' (PortField p ps) (i,hwty) = do
+    go' parents (PortField p ps) (i,hwty) = do
       pN <- uniquePortName p i
+      let parents' = pN : parents
       case hwty of
         Vector sz hwty' -> do
           arguments <- mapM (appendIdentifier (pN,hwty')) [0..sz-1]
-          (ports,_,exprs,_) <- unzip4 <$> zipWithM mkInput (extendPorts ps) arguments
+          (ports,_,exprs,_) <- unzip4 <$> zipWithM (mkInput parents') (extendPorts ps) arguments
           let netdecl  = NetDecl Nothing pN hwty
               vecExpr  = mkVectorChain sz hwty' exprs
               netassgn = Assignment pN vecExpr
@@ -543,7 +553,7 @@ mkInput pM = case pM of
 
         RTree d hwty' -> do
           arguments <- mapM (appendIdentifier (pN,hwty')) [0..2^d-1]
-          (ports,_,exprs,_) <- unzip4 <$> zipWithM mkInput (extendPorts ps) arguments
+          (ports,_,exprs,_) <- unzip4 <$> zipWithM (mkInput parents') (extendPorts ps) arguments
           let netdecl  = NetDecl Nothing pN hwty
               trExpr  = mkRTreeChain d hwty' exprs
               netassgn = Assignment pN trExpr
@@ -551,7 +561,7 @@ mkInput pM = case pM of
 
         Product _ hwtys -> do
           arguments <- zipWithM appendIdentifier (map (pN,) hwtys) [0..]
-          (ports,_,exprs,_) <- unzip4 <$> zipWithM mkInput (extendPorts ps) arguments
+          (ports,_,exprs,_) <- unzip4 <$> zipWithM (mkInput parents') (extendPorts ps) arguments
           let netdecl  = NetDecl Nothing pN hwty
               dcExpr   = DataCon hwty (DC (hwty,0)) exprs
               netassgn = Assignment pN dcExpr
@@ -560,7 +570,7 @@ mkInput pM = case pM of
         Clock nm rt Gated -> do
           let hwtys = [Clock nm rt Source, Bool]
           arguments <- zipWithM appendIdentifier (map (pN,) hwtys) [0..]
-          (ports,_,exprs,_) <- unzip4 <$> zipWithM mkInput (extendPorts ps) arguments
+          (ports,_,exprs,_) <- unzip4 <$> zipWithM (mkInput parents) (extendPorts ps) arguments
           let netdecl  = NetDecl Nothing pN hwty
               dcExpr   = DataCon hwty (DC (hwty,0)) exprs
               netassgn = Assignment pN dcExpr
@@ -613,63 +623,66 @@ genComponentName seen mkId nm =
 
 -- | Generate output port mappings
 mkOutput
-  :: Maybe PortName
+  :: [Identifier]
+  -> Maybe PortName
   -> (Identifier,HWType)
   -> NetlistMonad ([(Identifier,HWType)],[Declaration],Identifier)
-mkOutput pM = case pM of
-  Nothing -> go
-  Just p  -> go' p
+mkOutput parents0 pM = case pM of
+  Nothing -> go parents0
+  Just p  -> go' parents0 p
   where
-    go (o,hwty) = do
+    go parents (o,hwty) = do
       o' <- mkUniqueIdentifier Extended o
+      let parents' = o' : parents
       case hwty of
         Vector sz hwty' -> do
           results <- mapM (appendIdentifier (o',hwty')) [0..sz-1]
-          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput Nothing) results
+          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput parents' Nothing) results
           let netdecl = NetDecl Nothing o' hwty
               assigns = zipWith (assignId o' hwty 10) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,o')
 
         RTree d hwty' -> do
           results <- mapM (appendIdentifier (o',hwty')) [0..2^d-1]
-          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput Nothing) results
+          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput parents' Nothing) results
           let netdecl = NetDecl Nothing o' hwty
               assigns = zipWith (assignId o' hwty 10) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,o')
 
         Product _ hwtys -> do
           results <- zipWithM appendIdentifier (map (o,) hwtys) [0..]
-          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput Nothing) results
+          (ports,decls,ids) <- unzip3 <$> mapM (mkOutput parents' Nothing) results
           let netdecl = NetDecl Nothing o' hwty
               assigns = zipWith (assignId o' hwty 0) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,o')
 
         _ -> return ([(o',hwty)],[],o')
 
-    go' (PortName p) (o,hwty) = do
-      pN <- uniquePortName p o
+    go' parents (PortName p) (o,hwty) = do
+      pN <- mkPortName . (:parents) <$> uniquePortName p o
       return ([(pN,hwty)],[],pN)
 
-    go' (PortField p ps) (o,hwty) = do
+    go' parents (PortField p ps) (o,hwty) = do
       pN <- uniquePortName p o
+      let parents' = pN : parents
       case hwty of
         Vector sz hwty' -> do
           results <- mapM (appendIdentifier (pN,hwty')) [0..sz-1]
-          (ports,decls,ids) <- unzip3 <$> zipWithM mkOutput (extendPorts ps) results
+          (ports,decls,ids) <- unzip3 <$> zipWithM (mkOutput parents') (extendPorts ps) results
           let netdecl = NetDecl Nothing pN hwty
               assigns = zipWith (assignId pN hwty 10) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,pN)
 
         RTree d hwty' -> do
           results <- mapM (appendIdentifier (pN,hwty')) [0..2^d-1]
-          (ports,decls,ids) <- unzip3 <$> zipWithM mkOutput (extendPorts ps) results
+          (ports,decls,ids) <- unzip3 <$> zipWithM (mkOutput parents') (extendPorts ps) results
           let netdecl = NetDecl Nothing pN hwty
               assigns = zipWith (assignId pN hwty 10) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,pN)
 
         Product _ hwtys -> do
           results <- zipWithM appendIdentifier (map (pN,) hwtys) [0..]
-          (ports,decls,ids) <- unzip3 <$> zipWithM mkOutput (extendPorts ps) results
+          (ports,decls,ids) <- unzip3 <$> zipWithM (mkOutput parents') (extendPorts ps) results
           let netdecl = NetDecl Nothing pN hwty
               assigns = zipWith (assignId pN hwty 0) ids [0..]
           return (concat ports,netdecl:assigns ++ concat decls,pN)

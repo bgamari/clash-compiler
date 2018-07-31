@@ -584,7 +584,7 @@ mkInput parents0 pM = case pM of
       pN <- mkPortName . (:parents) <$> uniquePortName p i
       return ([(pN,hwty)],[],Identifier pN Nothing,pN)
 
-    go' parents (PortField p ps) (i,hwty) = do
+    go' parents (PortProduct p ps) (i,hwty) = do
       pN <- uniquePortName p i
       let parents' = pN : parents
       case hwty of
@@ -745,7 +745,7 @@ mkOutput parents0 pM = case pM of
       pN <- mkPortName . (:parents) <$> uniquePortName p o
       return ([(pN,hwty)],[],pN)
 
-    go' parents (PortField p ps) (o,hwty) = do
+    go' parents (PortProduct p ps) (o,hwty) = do
       pN <- uniquePortName p o
       let parents' = pN : parents
       case hwty of

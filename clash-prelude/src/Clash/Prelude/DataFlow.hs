@@ -26,6 +26,9 @@ module Clash.Prelude.DataFlow
     DataFlow (..)
     -- * Creating DataFlow circuits
   , liftDF
+  , liftDF'
+  , lowerDF'
+  , Ready(..)
   , pureDF
   , mealyDF
   , mealyDF'
@@ -46,6 +49,8 @@ module Clash.Prelude.DataFlow
   )
 where
 
+import Control.DeepSeq        (NFData(..))
+import Data.Maybe             (isJust)
 import GHC.TypeLits           (KnownNat, type (+), type (^))
 import Prelude                hiding ((++), (!!), length, map, repeat, tail, unzip3, zip3
                               , zipWith)
@@ -141,6 +146,42 @@ liftDF :: (Signal dom i -> Signal dom Bool -> Signal dom Bool
                         -> (Signal dom o, Signal dom Bool, Signal dom Bool))
        -> DataFlow dom Bool Bool i o
 liftDF = DF
+
+-- | A readiness value.
+data Ready a = Ready | NotReady
+             deriving (Eq, Ord, Show)
+instance NFData (Ready a) where
+    rnf x = x `seq` ()
+
+boolToReady :: Bool -> Ready a
+boolToReady b = if b then Ready else NotReady
+
+validToMaybe :: Bool -> a -> Maybe a
+validToMaybe valid dat
+  | valid     = Just dat
+  | otherwise = Nothing
+
+-- | Like 'liftDF' but with slightly more descriptive types.
+liftDF' :: (Signal dom (Maybe i) -> Signal dom (Ready o)
+                         -> (Signal dom (Maybe o), Signal dom (Ready i)))
+        -> DataFlow dom Bool Bool i o
+liftDF' f = DF $ \iData iValid oReady ->
+                   let (o, iReady) = f (validToMaybe <$> iValid <*> iData)
+                                       (fmap boolToReady oReady)
+                       oValid = isJust <$> o
+                       oData  = maybe (error "liftDF': invalid output") id <$> o
+                   in (oData, oValid, (== Ready) <$> iReady)
+
+-- | Destructure a dataflow circuit.
+lowerDF' :: DataFlow dom Bool Bool i o
+         -> Signal dom (Maybe i)        -- ^ input stream
+         -> Signal dom (Ready o)        -- ^ Outgoing back-pressure
+         -> (Signal dom (Maybe o), Signal dom (Ready i))
+lowerDF' (DF f) i oReady =
+    let (o, oValid, iReady) = f (maybe (error "lowerDF': invalid input") id <$> i)
+                                (isJust <$> i)
+                                ((== Ready) <$> oReady)
+    in (validToMaybe <$> oValid <*> o, boolToReady <$> iReady)
 
 -- | Create a 'DataFlow' circuit where the given function @f@ operates on the
 -- data, and the synchronisation channels are passed unaltered.

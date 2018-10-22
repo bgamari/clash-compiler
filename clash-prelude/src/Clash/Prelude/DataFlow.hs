@@ -28,6 +28,7 @@ module Clash.Prelude.DataFlow
   , liftDF
   , pureDF
   , mealyDF
+  , mealyDF'
   , mooreDF
   , fifoDF
     -- * Composition combinators
@@ -160,6 +161,24 @@ mealyDF clk rst f iS =
                       (s',o) = unbundle (f <$> s <*> i)
                       s      = register# (clockGate clk en) rst iS s'
                   in  (o,iV,oR))
+
+-- | Create a 'DataFlow' circuit from a Mealy machine description as those of
+-- "Clash.Prelude.Mealy" but that only produces output on some steps.
+mealyDF' :: Undefined s
+         => Clock domain gated
+         -> Reset domain synchronous
+         -> (s -> i -> (s, Maybe o))
+         -> s
+         -> DataFlow domain Bool Bool i o
+mealyDF' clk rst f iS =
+  DF (\i iV oR -> let en     = iV .&&. oR
+                      (s',o) = unbundle (g <$> en <*> s <*> i)
+                        where g True  s0 i' = f s0 i'
+                              g False s0 _  = (s0, Nothing)
+                      s      = register# (clockGate clk en) rst iS s'
+                      oV     = fmap isJust o
+                      err    = error "mealyDF': dummy output"
+                  in  (fmap (maybe err id) o,oV,oR))
 
 -- | Create a 'DataFlow' circuit from a Moore machine description as those of
 -- "Clash.Prelude.Moore"

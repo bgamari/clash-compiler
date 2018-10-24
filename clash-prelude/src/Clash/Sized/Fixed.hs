@@ -22,6 +22,7 @@ BEWARE: rounding by truncation introduces a sign bias!
 * Truncation for negative numbers effectively results in: round towards -infinity.
 -}
 
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
@@ -40,6 +41,9 @@ BEWARE: rounding by truncation introduces a sign bias!
 {-# LANGUAGE Trustworthy #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
+#if __GLASGOW_HASKELL__ >= 806
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownBool.Solver #-}
+#endif
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 module Clash.Sized.Fixed

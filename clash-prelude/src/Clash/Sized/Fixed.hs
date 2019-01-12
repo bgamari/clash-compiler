@@ -40,6 +40,7 @@ BEWARE: rounding by truncation introduces a sign bias!
 {-# LANGUAGE Trustworthy #-}
 
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownBool.Solver #-}
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 module Clash.Sized.Fixed

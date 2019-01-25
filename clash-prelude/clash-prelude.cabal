@@ -167,6 +167,7 @@ Library
 
                       Clash.Xilinx.ClockGen
                       Clash.Xilinx.DDR
+                      Clash.Xilinx.IOB
 
                       Clash.Tutorial
                       Clash.Examples

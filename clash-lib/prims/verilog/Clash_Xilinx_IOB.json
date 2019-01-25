@@ -1,0 +1,87 @@
+[ { "BlackBox" :
+    { "name" : "Clash.Xilinx.IOB.IOB.lvdsInput#"
+    , "kind" : "Declaration"
+    , "type" :
+"lvdsInput#
+  :: DiffPair (Signal dom Bool)  -- ARG[0], ARG[1]
+  -> Signal dom Bool             -- RESULT[0]
+"
+    , "template" :
+"// lvdsInput# begin
+IBUFDS #(
+    DIFF_TERM("TRUE")
+    IO_STANDARD("LVDS_25")
+  ) ~GENSYM[~COMPNAME_IBUFDS] (
+    .I(~ARG[0])
+  , .IB(~ARG[1])
+  , .O(~RESULT[0])
+  );
+"
+    }
+  },
+
+  { "BlackBox":
+    { "name" : "Clash.Xilinx.IOB.IOB.lvdsOutput#"
+    , "kind" : "Declaration"
+    , "type" :
+"lvdsOutput#
+  :: Signal dom Bool             -- ARG[0]
+  -> DiffPair (Signal dom Bool)  -- RESULT[0], RESULT[1]
+"
+    , "template" :
+"// lvdsOutput# begin
+OBUFDS #(
+    IO_STANDARD("LVDS_25")
+  ) ~GENSYM[~COMPNAME_OBUFDS] (
+    .I(~ARG[0])
+  , .O(~RESULT[0])
+  , .OB(~RESULT[1])
+  );
+"
+    }
+  },
+
+  { "BlackBox" :
+    { "name" : "Clash.Xilinx.IOB.IOB.lvdsClockInput#"
+    , "kind" : "Declaration"
+    , "type" :
+"lvdsClockInput#
+  :: DiffPair (Signal dom Bool)  -- ARG[0], ARG[1]
+  -> Signal dom Bool             -- RESULT[0]
+"
+    , "template" :
+"// lvdsClockInput# begin
+IBUFDS #(
+    DIFF_TERM("TRUE")
+    IO_STANDARD("LVDS_25")
+  ) ~GENSYM[~COMPNAME_IBUFDS] (
+    .I(~ARG[0])
+  , .IB(~ARG[1])
+  , .O(~RESULT[0])
+  );
+"
+    }
+  },
+
+  { "BlackBox":
+    { "name" : "Clash.Xilinx.IOB.IOB.lvdsClockOutput"
+    , "kind" : "Declaration"
+    , "type" :
+"lvdsClockOutput
+  :: Clock dom gated       -- ARG[0]
+  -> DiffPair (Clock dom gated)   -- RESULT[0], RESULT[1]
+"
+    , "template" :
+"// lvdsClockOutput begin
+OBUFDS #(
+    IO_STANDARD("LVDS_25")
+  ) ~GENSYM[~COMPNAME_OBUFDS] (
+    .I(~ARG[0])
+  , .O(~RESULT[0])
+  , .OB(~RESULT[1])
+  );
+"
+    }
+  }
+
+}

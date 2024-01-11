@@ -1,5 +1,9 @@
 # Changelog for the Clash project
 
+## 1.8.2 *TBD*
+
+* Add `ShowX`, `NFDataX` instances for `Proxy`
+
 ## 1.8.1 *Nov 10th 2023*
 
 * Bump package dependencies to allow inclusion in stackage-nightly

@@ -22,6 +22,9 @@ module Clash.Cores.SPI
     -- ** Vendor configured SPI slaves
   , spiSlaveLatticeSBIO
   , spiSlaveLatticeBB
+    -- * Building blocks
+  , spiCommon
+  , spiGen
   ) where
 
 import Data.Maybe (fromMaybe, isJust)

@@ -418,7 +418,7 @@ renderElem b (Component (Decl n subN (l:ls))) = do
   case indexNote' errr subN <$> func0 of
     Just (templ0,_,libs,imps,inc,pCtx) -> do
       let tr msg0 msg1
-              | "head" `Data.Text.isInfixOf` bbName pCtx = trace $ msg0 <> ": " <> msg1
+              | "head" `Data.Text.isInfixOf` bbName pCtx = trace $ "BEN(renderElem:" <> msg0 <> "): " <> msg1
               | otherwise  = id
       let b' = pCtx { bbResults = [(o,oTy)], bbInputs = bbInputs pCtx ++ is }
           layoutOptions = LayoutOptions (AvailablePerLine 120 0.4)

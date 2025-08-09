@@ -1066,7 +1066,9 @@ mkFunInput parentName resId e =
   tcm <- Lens.view tcCache
   -- TODO: Rewrite this function to use blackbox functions. Right now it
   -- TODO: generates strings that are later parsed/interpreted again. Silly!
-  templ <- case appE of
+  templ <-
+      trace ("BEN(mkFunInput:everything) " <> show (parentName, resId, e))
+      $ case appE of
             Prim p -> do
               bb  <- extractPrimWarnOrFail (primName p)
               case bb of

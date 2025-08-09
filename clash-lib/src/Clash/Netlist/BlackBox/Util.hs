@@ -682,6 +682,8 @@ parseFail b t = case runParse t of
         , "in component " <> Data.Text.unpack (Id.toText $ bbCompName b)
         , "error:"
         , show (_errDoc errInfo)
+        , "template:"
+        , Text.unpack t
         ]
   Success templ -> templ
 

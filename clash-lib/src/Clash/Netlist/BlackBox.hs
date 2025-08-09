@@ -1071,7 +1071,8 @@ mkFunInput parentName resId e =
               bb  <- extractPrimWarnOrFail (primName p)
               case bb of
                 P.BlackBox {..} ->
-                  pure (Left (kind,outputUsage,libraries,imports,includes,primName p,template))
+                  trace ("BEN(mkFunInput) " <> show (parentName, resId, kind, primName p, template, e))
+                    $ pure (Left (kind,outputUsage,libraries,imports,includes,primName p,template))
                 P.Primitive pn _ pt ->
                   error $ $(curLoc) ++ "Unexpected blackbox type: "
                                     ++ "Primitive " ++ show pn
@@ -1243,7 +1244,7 @@ mkFunInput parentName resId e =
     Left (TExpr,_,libs,imps,inc,nm,templ') -> do
       onBlackBox
         (\t -> do t' <- getAp (prettyBlackBox t)
-                  let t'' = traceShow ("BEN Suspicious " <> show t') $ Id.unsafeMake (Text.toStrict t')
+                  let t'' = trace ("BEN Suspicious " <> show t' <> show appE) $ Id.unsafeMake (Text.toStrict t')
                       assn = Assignment (Id.unsafeMake "~RESULT") Cont (Identifier t'' Nothing)
                   return ((Right (Id.unsafeMake "",[assn]),Cont,libs,imps,inc,bbCtx),dcls))
         (\bbName bbHash (TemplateFunction k g _) -> do

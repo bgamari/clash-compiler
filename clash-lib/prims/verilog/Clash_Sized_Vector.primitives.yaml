@@ -2,7 +2,7 @@
     name: Clash.Sized.Vector.head
     kind: Expression
     type: 'head :: Vec (n + 1) a -> a'
-    template: '~FROMBV[~VAR[vec][0][\~SIZE[~TYP[0]]-1 -: ~SIZE[~TYPO]\]][~TYPO]'
+    template: "~FROMBV[~VAR[vec][0][\\~SIZE[~TYP[0]]-1 -: ~SIZE[~TYPO]\\]][~TYPO]"
     workInfo: Never
 - BlackBox:
     name: Clash.Sized.Vector.tail

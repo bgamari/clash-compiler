@@ -36,6 +36,7 @@ module Clash.Netlist.BlackBox.Util
     , prettyBlackBox
     ) where
 
+import Debug.Trace
 import           Control.Exception               (throw)
 import           Control.Lens
   (use, (%=), _1, _2, element, (^?))
@@ -410,13 +411,18 @@ renderElem b (Component (Decl n subN (l:ls))) = do
   (o,oTy,_) <- idToExpr <$> bitraverse (lineToIdentifier b) (return . lineToType b) l
   is <- mapM (fmap idToExpr . bitraverse (lineToIdentifier b) (return . lineToType b)) ls
   sp <- getSrcSpan
+
   let func0 = IntMap.lookup n (bbFunctions b)
       errr = concat [ "renderElem: not enough functions rendered? Needed "
                     , show (subN +1 ), " got only ", show (length (fromJust func0)) ]
   case indexNote' errr subN <$> func0 of
     Just (templ0,_,libs,imps,inc,pCtx) -> do
+      let tr msg0 msg1
+              | "head" `Data.Text.isInfixOf` bbName pCtx = trace $ msg0 <> ": " <> msg1
+              | otherwise  = id
       let b' = pCtx { bbResults = [(o,oTy)], bbInputs = bbInputs pCtx ++ is }
           layoutOptions = LayoutOptions (AvailablePerLine 120 0.4)
+          render :: PP.Doc ann -> N.BlackBox
           render = N.BBTemplate . parseFail b' . renderLazy . layoutPretty layoutOptions
 
       templ1 <-
@@ -426,7 +432,7 @@ renderElem b (Component (Decl n subN (l:ls))) = do
           Right (nm0,ds) -> do
             nm1 <- Id.next nm0
             block <- getAp (blockDecl nm1 ds)
-            return (render block)
+            return $ render $ tr "templ1" (show block) block
 
       templ4 <-
         case templ1 of
@@ -442,7 +448,7 @@ renderElem b (Component (Decl n subN (l:ls))) = do
                 nm2 <- Id.makeBasic "bb"
                 let bbD = BlackBoxD nm1 libs imps inc (N.BBTemplate templ3) b'
                 block <- getAp (blockDecl nm2 (templDecls ++ [bbD]))
-                return (render block)
+                return $ render $ tr "templ4" (show block) block
 
       case verifyBlackBoxContext b' templ4 of
         Nothing -> do

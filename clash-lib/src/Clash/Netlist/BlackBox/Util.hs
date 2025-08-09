@@ -410,7 +410,7 @@ renderElem
 renderElem b (Component (Decl n subN (l:ls))) = do
   (o,oTy,_) <- idToExpr <$> bitraverse (lineToIdentifier b) (return . lineToType b) l
   is <- mapM (fmap idToExpr . bitraverse (lineToIdentifier b) (return . lineToType b)) ls
-  sp <- getSrcSpan
+  sp <- traceShow (show (l:ls)) getSrcSpan
 
   let func0 = IntMap.lookup n (bbFunctions b)
       errr = concat [ "renderElem: not enough functions rendered? Needed "
@@ -426,13 +426,14 @@ renderElem b (Component (Decl n subN (l:ls))) = do
           render = N.BBTemplate . parseFail b' . renderLazy . layoutPretty layoutOptions
 
       templ1 <-
+        tr "outer" (show templ0) $
         case templ0 of
           Left t ->
             return t
           Right (nm0,ds) -> do
-            nm1 <- Id.next nm0
+            nm1 <- tr "pre-templ1" (show (nm0, ds)) $ Id.next nm0
             block <- getAp (blockDecl nm1 ds)
-            return $ render $ tr "templ1" (show block) block
+            return $ render $ tr "templ1 block" (show block) block
 
       templ4 <-
         case templ1 of

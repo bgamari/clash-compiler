@@ -997,7 +997,7 @@ prettyElem
   :: (HasCallStack, Monad m)
   => Element
   -> Ap m Text
-prettyElem (Text t) = return t
+prettyElem (Text t) = return $ Text.replace "[" "[\\" $ Text.replace "]" "\\]" t
 prettyElem (Component (Decl i 0 args)) = do
   args' <- mapM (\(a,b) -> (,) <$> prettyBlackBox a <*> prettyBlackBox b) args
   case args' of

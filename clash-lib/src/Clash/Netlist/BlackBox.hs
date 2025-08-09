@@ -35,6 +35,7 @@ import           Control.Monad                 (when, replicateM, zipWithM)
 import           Control.Monad.Extra           (concatMapM)
 import           Control.Monad.IO.Class        (liftIO)
 import           Data.Bifunctor                (first, second)
+import Debug.Trace
 import           Data.Either                   (lefts, partitionEithers)
 import           Data.Foldable                 (for_)
 import qualified Data.HashMap.Lazy             as HashMap
@@ -1242,7 +1243,7 @@ mkFunInput parentName resId e =
     Left (TExpr,_,libs,imps,inc,nm,templ') -> do
       onBlackBox
         (\t -> do t' <- getAp (prettyBlackBox t)
-                  let t'' = Id.unsafeMake (Text.toStrict t')
+                  let t'' = traceShow ("BEN Suspicious " <> show t') $ Id.unsafeMake (Text.toStrict t')
                       assn = Assignment (Id.unsafeMake "~RESULT") Cont (Identifier t'' Nothing)
                   return ((Right (Id.unsafeMake "",[assn]),Cont,libs,imps,inc,bbCtx),dcls))
         (\bbName bbHash (TemplateFunction k g _) -> do

@@ -1247,7 +1247,7 @@ mkFunInput parentName resId e =
       return ((Left l',outputUsage,libs,imps,inc,bbCtx),dcls ++ templDecl)
     Left (TExpr,_,libs,imps,inc,nm,templ') -> do
       onBlackBox
-        (\t -> do t' <- trace (unwords ["BEN(mkFunInput:pre-Suspicious): " <> show t) $ getAp (prettyBlackBox t)
+        (\t -> do t' <- trace ("BEN(mkFunInput:pre-Suspicious): " <> show t) $ getAp (prettyBlackBox t)
                   let t'' = trace (unwords ["BEN(mkFunInput:Suspicious):", show parentName, show t', show appE]) $ Id.unsafeMake (Text.toStrict t')
                       assn = Assignment (Id.unsafeMake "~RESULT") Cont (Identifier t'' Nothing)
                   return ((Right (Id.unsafeMake "",[assn]),Cont,libs,imps,inc,bbCtx),dcls))

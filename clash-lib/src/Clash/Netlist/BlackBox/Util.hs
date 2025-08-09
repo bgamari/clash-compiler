@@ -410,7 +410,7 @@ renderElem
 renderElem b (Component (Decl n subN (l:ls))) = do
   (o,oTy,_) <- idToExpr <$> bitraverse (lineToIdentifier b) (return . lineToType b) l
   is <- mapM (fmap idToExpr . bitraverse (lineToIdentifier b) (return . lineToType b)) ls
-  sp <- traceShow (show (l:ls)) getSrcSpan
+  sp <- trace ("BEN(renderElem): " <> show (l:ls)) getSrcSpan
 
   let func0 = IntMap.lookup n (bbFunctions b)
       errr = concat [ "renderElem: not enough functions rendered? Needed "

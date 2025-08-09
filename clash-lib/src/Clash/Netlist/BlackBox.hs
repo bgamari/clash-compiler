@@ -1071,7 +1071,7 @@ mkFunInput parentName resId e =
               bb  <- extractPrimWarnOrFail (primName p)
               case bb of
                 P.BlackBox {..} ->
-                  trace ("BEN(mkFunInput) " <> show (parentName, resId, kind, primName p, template, e))
+                  trace ("BEN(mkFunInput:BlackBox) " <> show (parentName, resId, kind, primName p, template, e))
                     $ pure (Left (kind,outputUsage,libraries,imports,includes,primName p,template))
                 P.Primitive pn _ pt ->
                   error $ $(curLoc) ++ "Unexpected blackbox type: "
@@ -1097,7 +1097,8 @@ mkFunInput parentName resId e =
                       error $ $(curLoc) ++ show fName ++ " yielded an error: "
                                         ++ err
                     Right (BlackBoxMeta{..}, template) ->
-                      pure $
+                      trace ("BEN(mkFunInput:BlackBoxHaskell) " <> show (parentName, resId, template, bbKind, primName p, e))
+                        $ pure $
                         Left ( bbKind, bbOutputUsage, bbLibrary, bbImports
                              , bbIncludes, pName, template)
             Data dc -> do
@@ -1227,7 +1228,8 @@ mkFunInput parentName resId e =
                     Nothing -> error $ $(curLoc) ++ "Cannot make function input for: " ++ showPpr e
             C.Lam {} -> do
               let is0 = mkInScopeSet (Lens.foldMapOf freeIds unitVarSet appE)
-              either Left (Right . first (second (tickDecls ++))) <$> go is0 0 appE
+              trace ("BEN(mkFunInput:Lam): " <> show e)
+                $ either Left (Right . first (second (tickDecls ++))) <$> go is0 0 appE
             _ -> error $ $(curLoc) ++ "Cannot make function input for: " ++ showPpr e
   let pNm = case appE of
               Prim p -> primName p
